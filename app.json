@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MyLessonPlan",
-    "slug": "MyLessonPlan",
+    "name": "Lesson Planner GH",
+    "slug": "lesson-planner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,14 +16,26 @@
       "supportsTablet": true
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.ahmedofosu.lessonplanner"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "expo-sqlite"
+    ],
+    "extra": {
+      "updateManifestUrl": "https://raw.githubusercontent.com/Ahmed2054/LessonPlanner_GH/main/version.json",
+      "eas": {
+        "projectId": "aff5bda5-3ee9-4cd8-ac11-19f0614a4142"
+      }
     }
   }
 }
