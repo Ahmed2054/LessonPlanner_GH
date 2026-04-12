@@ -4,6 +4,7 @@ import {
   View, 
   ActivityIndicator, 
   Alert,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
@@ -69,6 +70,7 @@ function MainContent() {
   const prevGradeRef = useRef('');
   const prevSubjectIdRef = useRef(null);
   const currentVersionInfo = getCurrentVersionInfo();
+  const lastPromptedUpdateRef = useRef(null);
 
   // Subjects
   const [subjects, setSubjects] = useState([]);
@@ -227,6 +229,77 @@ function MainContent() {
       setLoading(false);
     }
   };
+
+  const promptForAvailableUpdate = useCallback((result) => {
+    const remoteVersion = result?.remoteManifest?.version;
+
+    if (!remoteVersion || lastPromptedUpdateRef.current === remoteVersion) {
+      return;
+    }
+
+    lastPromptedUpdateRef.current = remoteVersion;
+
+    const releaseNotes = result.remoteManifest.notes ? `\n\nWhat is new:\n${result.remoteManifest.notes}` : '';
+
+    Alert.alert(
+      "New Update Available",
+      `Current version: ${result.currentVersion.version}\nNew version: ${remoteVersion}${releaseNotes}`,
+      [
+        { text: "Later", style: "cancel" },
+        {
+          text: "Update Now",
+          onPress: async () => {
+            setLoadingMessage({ title: "Downloading update...", subtitle: "Preparing the APK for installation" });
+            setLoading(true);
+
+            try {
+              await downloadAndInstallUpdate(result.remoteManifest, (progress) => {
+                const percent = Math.round(progress * 100);
+                setLoadingMessage({
+                  title: "Downloading update...",
+                  subtitle: `Downloading APK: ${percent}%`
+                });
+              });
+            } catch (downloadError) {
+              Alert.alert("Update Failed", downloadError.message);
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  }, []);
+
+  const checkForUpdatesSilently = useCallback(async () => {
+    try {
+      const result = await checkForAppUpdate();
+
+      if (result.hasUpdate) {
+        promptForAvailableUpdate(result);
+      }
+    } catch (error) {
+      console.log("Silent update check skipped:", error.message);
+    }
+  }, [promptForAvailableUpdate]);
+
+  useEffect(() => {
+    if (initing) return;
+
+    checkForUpdatesSilently();
+  }, [initing, checkForUpdatesSilently]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        checkForUpdatesSilently();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [checkForUpdatesSilently]);
 
 
 

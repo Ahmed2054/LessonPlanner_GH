@@ -30,6 +30,24 @@ export default function SettingsScreen({
       </View>
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, paddingHorizontal: 5 }}>
         <View style={{ paddingHorizontal: 5, marginBottom: 15 }}>
+          <Text style={styles.subTitle}>APP UPDATES</Text>
+        </View>
+        <View style={styles.modernItemContainer}>
+          <TouchableOpacity 
+            style={[styles.primaryBtn, { backgroundColor: '#e3f2fd', flexDirection: 'row', justifyContent: 'center', height: 48 }]} 
+            onPress={handleCheckForUpdate}
+            disabled={loading}
+          >
+            <Ionicons name="cloud-download-outline" size={20} color={COLORS.primary} style={{ marginRight: 8 }} />
+            <Text style={[styles.btnText, { color: COLORS.primary }]}>Check for Update</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.helpText, { textAlign: 'left', marginTop: 12, fontSize: 11, opacity: 0.7 }]}>
+            Current version: {currentVersionLabel}
+          </Text>
+        </View>
+
+        <View style={{ paddingHorizontal: 5, marginBottom: 15, marginTop: 15 }}>
           <Text style={styles.subTitle}>AI CONFIGURATION</Text>
         </View>
         <View style={styles.modernItemContainer}>
@@ -119,34 +137,6 @@ export default function SettingsScreen({
               </>
             )}
           </TouchableOpacity>
-        </View>
-
-        <View style={{ paddingHorizontal: 5, marginBottom: 15, marginTop: 20 }}>
-          <Text style={styles.subTitle}>APP UPDATES</Text>
-        </View>
-        <View style={styles.modernItemContainer}>
-          <Text style={[styles.helpText, { textAlign: 'left', marginTop: 0, fontSize: 12 }]}>
-            Check GitHub for the latest APK and open Android's installer when a newer version is available.
-          </Text>
-
-          <TouchableOpacity 
-            style={[styles.primaryBtn, { backgroundColor: '#e3f2fd', marginTop: 15, flexDirection: 'row', justifyContent: 'center', height: 48 }]} 
-            onPress={handleCheckForUpdate}
-            disabled={loading}
-          >
-            <Ionicons name="cloud-download-outline" size={20} color={COLORS.primary} style={{ marginRight: 8 }} />
-            <Text style={[styles.btnText, { color: COLORS.primary }]}>Check for Update</Text>
-          </TouchableOpacity>
-
-          <Text style={[styles.helpText, { textAlign: 'left', marginTop: 12, fontSize: 11, opacity: 0.7 }]}>
-            Current version: {currentVersionLabel}
-          </Text>
-
-          {!updateConfigReady && (
-            <Text style={[styles.helpText, { textAlign: 'left', marginTop: 8, fontSize: 11, color: COLORS.danger, opacity: 1 }]}>
-              Set your real GitHub `version.json` URL in `app.json` before this button will work.
-            </Text>
-          )}
         </View>
 
         <View style={{ paddingHorizontal: 5, marginBottom: 15, marginTop: 20 }}>
