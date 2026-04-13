@@ -6,6 +6,32 @@ import { styles } from '../theme/styles';
 import { COLORS } from '../theme/colors';
 import LessonPlanPreview from '../components/LessonPlanPreview';
 
+function DropdownField({ placeholder, value, onPress, disabled = false }) {
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled}
+        style={[
+          styles.input,
+          {
+            minHeight: 50,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: disabled ? 0.6 : 1,
+          },
+        ]}
+      >
+        <Text style={{ flex: 1, fontSize: 15, color: value ? COLORS.dark : '#bbb', fontWeight: value ? '600' : '400' }}>
+          {value || placeholder}
+        </Text>
+        <Ionicons name="chevron-down" size={18} color="#888" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Step Header Component ──────────────────────────────────────────
 function StepHeader({ number, label, color = COLORS.primary, onBack, onForward, forwardDisabled, rightContent, style }) {
   return (
@@ -84,6 +110,47 @@ function SectionLabel({ icon, label }) {
   );
 }
 
+function SetupGroup({ icon, title, subtitle, tint, children }) {
+  return (
+    <View
+      style={{
+        backgroundColor: '#fff',
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: tint + '22',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            backgroundColor: tint + '18',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 10,
+          }}
+        >
+          <Ionicons name={icon} size={18} color={tint} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.dark }}>{title}</Text>
+          <Text style={{ fontSize: 11, color: '#7b8794', marginTop: 2 }}>{subtitle}</Text>
+        </View>
+      </View>
+      {children}
+    </View>
+  );
+}
+
 // ─── Meta Chip ──────────────────────────────────────────────────────
 function MetaChip({ label, value }) {
   return (
@@ -129,6 +196,8 @@ export default function CreateScreen({
   const [viewingIndicator, setViewingIndicator] = useState(null);
   const [editingMetadata, setEditingMetadata] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showGradeDropdown, setShowGradeDropdown] = useState(false);
+  const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
 
   // Generation Options Modal
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -255,93 +324,89 @@ export default function CreateScreen({
                 {/* API key warning */}
 
 
-                {/* Date + Week */}
-                <SectionLabel icon="calendar-outline" label="Lesson Details" />
-                <View style={styles.row}>
-                  <View style={{ flex: 1, marginRight: 6 }}>
-                    <Text style={styles.label}>Date</Text>
-                    <TouchableOpacity
-                      style={[styles.input, { justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <Ionicons name="calendar-outline" size={15} color="#aaa" style={{ marginRight: 6 }} />
-                      <Text style={{ fontSize: 15, color: date ? COLORS.dark : '#bbb', fontWeight: date ? '600' : '400' }}>
-                        {formatDateDisplay(date)}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={{ flex: 1, marginLeft: 6 }}>
-                    <Text style={styles.label}>Week</Text>
-                    <TextInput style={styles.input} value={week} onChangeText={setWeek} keyboardType="numeric" placeholder="e.g. 3" placeholderTextColor="#ccc" />
-                  </View>
-                </View>
-
-                <View style={styles.row}>
-                  <View style={{ flex: 1, marginRight: 6 }}>
-                    <Text style={styles.label}>Class Size</Text>
-                    <TextInput style={styles.input} value={classSize} onChangeText={setClassSize} keyboardType="numeric" placeholder="e.g. 30" placeholderTextColor="#ccc" />
-                  </View>
-                  <View style={{ flex: 1, marginLeft: 6 }}>
-                    <Text style={styles.label}>Duration</Text>
-                    <TextInput style={styles.input} value={lessonDuration} onChangeText={setLessonDuration} placeholder="e.g. 60 mins" placeholderTextColor="#ccc" />
-                  </View>
-                </View>
-
-                {/* Grade selector */}
-                <SectionLabel icon="school-outline" label="Select Class (Grade)" />
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-                  {allGrades.map(g => (
-                    <TouchableOpacity
-                      key={g.grade}
-                      style={[
-                        styles.pill,
-                        selectedGrade === g.grade && styles.pillActive,
-                        { minWidth: 60, alignItems: 'center' }
-                      ]}
-                      onPress={() => setSelectedGrade(g.grade)}
-                    >
-                      <Text style={[styles.pillText, selectedGrade === g.grade && styles.pillTextActive]}>{g.grade}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-
-                {/* Subject selector */}
-                {selectedGrade ? (
-                  <>
-                    <SectionLabel icon="book-outline" label="Select Subject" />
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-                      {gradeSubjects.map(s => (
-                        <TouchableOpacity
-                          key={s.id}
-                          style={[
-                            styles.pill,
-                            selectedSubjectId === s.id && styles.pillActive,
-                            { minWidth: 100, alignItems: 'center' }
-                          ]}
-                          onPress={() => setSelectedSubjectId(s.id)}
-                        >
-                          <Text style={[styles.pillText, selectedSubjectId === s.id && styles.pillTextActive]}>
-                            {s.actual_name || s.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-
-                    {selectedSubjectId ? (
+                <SetupGroup
+                  icon="calendar-outline"
+                  title="Lesson Details"
+                  subtitle="Set the core information for this lesson"
+                  tint={COLORS.primary}
+                >
+                  <View style={styles.row}>
+                    <View style={{ flex: 1, marginRight: 6 }}>
+                      <Text style={styles.label}>Date</Text>
                       <TouchableOpacity
-                        style={[styles.primaryBtn, { marginTop: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }]}
+                        style={[styles.input, { justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
+                        onPress={() => setShowDatePicker(true)}
+                      >
+                        <Ionicons name="calendar-outline" size={15} color="#aaa" style={{ marginRight: 6 }} />
+                        <Text style={{ fontSize: 15, color: date ? COLORS.dark : '#bbb', fontWeight: date ? '600' : '400' }}>
+                          {formatDateDisplay(date)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 6 }}>
+                      <Text style={styles.label}>Week</Text>
+                      <TextInput style={styles.input} value={week} onChangeText={setWeek} keyboardType="numeric" placeholder="e.g. 3" placeholderTextColor="#ccc" />
+                    </View>
+                  </View>
+
+                  <View style={styles.row}>
+                    <View style={{ flex: 1, marginRight: 6 }}>
+                      <Text style={styles.label}>Class Size</Text>
+                      <TextInput style={styles.input} value={classSize} onChangeText={setClassSize} keyboardType="numeric" placeholder="e.g. 30" placeholderTextColor="#ccc" />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 6 }}>
+                      <Text style={styles.label}>Duration</Text>
+                      <TextInput style={styles.input} value={lessonDuration} onChangeText={setLessonDuration} placeholder="e.g. 60 mins" placeholderTextColor="#ccc" />
+                    </View>
+                  </View>
+                </SetupGroup>
+
+                <SetupGroup
+                  icon="school-outline"
+                  title="Select Class"
+                  subtitle="Choose the grade you want to plan for"
+                  tint={COLORS.accent}
+                >
+                  <DropdownField
+                    placeholder="Choose a class"
+                    value={selectedGrade}
+                    onPress={() => setShowGradeDropdown(true)}
+                  />
+                </SetupGroup>
+
+                <SetupGroup
+                  icon="book-outline"
+                  title="Select Subject"
+                  subtitle={selectedGrade ? 'Pick a subject available for the selected class' : 'Choose a class first to load subjects'}
+                  tint={COLORS.success}
+                >
+                  <DropdownField
+                    placeholder={
+                      selectedGrade
+                        ? (gradeSubjects.length ? 'Choose a subject' : 'No subjects available')
+                        : 'Choose a class first'
+                    }
+                    value={gradeSubjects.find(s => s.id === selectedSubjectId)?.actual_name || gradeSubjects.find(s => s.id === selectedSubjectId)?.name || ''}
+                    onPress={() => setShowSubjectDropdown(true)}
+                    disabled={!selectedGrade || !gradeSubjects.length}
+                  />
+
+                  {selectedGrade ? (
+                    selectedSubjectId ? (
+                      <TouchableOpacity
+                        style={[styles.primaryBtn, { marginTop: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }]}
                         onPress={() => setStep(2)}
                       >
                         <Text style={styles.btnText}>Next: Select Indicator</Text>
                         <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 8 }} />
                       </TouchableOpacity>
                     ) : (
-                      <Text style={[styles.helpText, { marginTop: 10 }]}>Select a subject to continue.</Text>
-                    )}
-                  </>
-                ) : (
-                  <Text style={[styles.helpText, { marginTop: 10 }]}>Select a class to see subjects.</Text>
-                )}
+                      <Text style={[styles.helpText, { marginTop: 4 }]}>Select a subject to continue.</Text>
+                    )
+                  ) : (
+                    <Text style={[styles.helpText, { marginTop: 4 }]}>Select a class to see subjects.</Text>
+                  )}
+                </SetupGroup>
               </View>
             )}
           </View>
@@ -869,6 +934,100 @@ export default function CreateScreen({
                 </TouchableOpacity>
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showGradeDropdown} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { padding: 20, borderRadius: 22, maxHeight: '70%' }]}>
+            <View style={[styles.cardHeader, { marginBottom: 14 }]}>
+              <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Select Class</Text>
+              <TouchableOpacity
+                onPress={() => setShowGradeDropdown(false)}
+                style={{ backgroundColor: COLORS.light, borderRadius: 20, padding: 6 }}
+              >
+                <Ionicons name="close" size={22} color={COLORS.dark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {allGrades.map((g) => (
+                <TouchableOpacity
+                  key={g.grade}
+                  onPress={() => {
+                    setSelectedGrade(g.grade);
+                    setShowGradeDropdown(false);
+                  }}
+                  style={{
+                    paddingVertical: 14,
+                    paddingHorizontal: 12,
+                    borderRadius: 12,
+                    marginBottom: 8,
+                    backgroundColor: selectedGrade === g.grade ? COLORS.primary + '14' : COLORS.light,
+                    borderWidth: 1,
+                    borderColor: selectedGrade === g.grade ? COLORS.primary + '45' : '#eceff3',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: selectedGrade === g.grade ? '700' : '500', color: COLORS.dark }}>
+                    {g.grade}
+                  </Text>
+                  {selectedGrade === g.grade ? <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} /> : null}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showSubjectDropdown} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { padding: 20, borderRadius: 22, maxHeight: '70%' }]}>
+            <View style={[styles.cardHeader, { marginBottom: 14 }]}>
+              <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Select Subject</Text>
+              <TouchableOpacity
+                onPress={() => setShowSubjectDropdown(false)}
+                style={{ backgroundColor: COLORS.light, borderRadius: 20, padding: 6 }}
+              >
+                <Ionicons name="close" size={22} color={COLORS.dark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {gradeSubjects.map((subject) => {
+                const label = subject.actual_name || subject.name;
+                const isSelected = selectedSubjectId === subject.id;
+                return (
+                  <TouchableOpacity
+                    key={subject.id}
+                    onPress={() => {
+                      setSelectedSubjectId(subject.id);
+                      setShowSubjectDropdown(false);
+                    }}
+                    style={{
+                      paddingVertical: 14,
+                      paddingHorizontal: 12,
+                      borderRadius: 12,
+                      marginBottom: 8,
+                      backgroundColor: isSelected ? COLORS.primary + '14' : COLORS.light,
+                      borderWidth: 1,
+                      borderColor: isSelected ? COLORS.primary + '45' : '#eceff3',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text style={{ flex: 1, fontSize: 15, fontWeight: isSelected ? '700' : '500', color: COLORS.dark }}>
+                      {label}
+                    </Text>
+                    {isSelected ? <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         </View>
       </Modal>

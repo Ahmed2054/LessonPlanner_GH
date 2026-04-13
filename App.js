@@ -37,7 +37,8 @@ import {
   deleteAllCurricula,
   factoryReset,
   getCurriculumBySubject,
-  autoImportTemplates
+  getTemplateSubjectNames,
+  restoreTemplateSubjects
 } from './src/services/database';
 import { generateLessonPlan, regeneratePhase, generateNote, generateQuestions, testConnection } from './src/services/ai';
 import { generatePDFFromPlan, openPDF, downloadFile } from './src/services/pdf';
@@ -74,6 +75,8 @@ function MainContent() {
 
   // Subjects
   const [subjects, setSubjects] = useState([]);
+  const [restoreSubjectNames] = useState(() => getTemplateSubjectNames());
+  const [selectedRestoreSubjects, setSelectedRestoreSubjects] = useState([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [allGrades, setAllGrades] = useState([]);
   const [gradeSubjects, setGradeSubjects] = useState([]);
@@ -135,21 +138,26 @@ function MainContent() {
     const updated = await getSubjects();
     setSubjects(updated);
   };
-
-
-
   const handleRestoreDefaults = async () => {
-    Alert.alert("Restore Defaults", "This will re-import any missing default subjects from the app bundle. Continue?", [
+    if (selectedRestoreSubjects.length === 0) {
+      return Alert.alert("Select Subjects", "Tick at least one subject to restore.");
+    }
+
+    const subjectLabel = selectedRestoreSubjects.length === 1
+      ? selectedRestoreSubjects[0]
+      : `${selectedRestoreSubjects.length} selected subjects`;
+
+    Alert.alert("Restore Selected Subjects", `This will restore ${subjectLabel} from the app bundle. Continue?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Yes, Restore", onPress: async () => {
         setLoadingMessage({ title: "Restoring...", subtitle: "Importing bundled subjects" });
         setLoading(true);
         try {
           await initDatabase();
-          await autoImportTemplates(true);
+          const restoredCount = await restoreTemplateSubjects(selectedRestoreSubjects, true);
           await refreshSubjects();
           setAllGrades(await getAllGrades());
-          Alert.alert("Success", "Default subjects have been restored.");
+          Alert.alert("Success", `${restoredCount} subject${restoredCount === 1 ? '' : 's'} restored.`);
         } catch (e) {
           Alert.alert("Error", e.message);
         } finally {
@@ -158,6 +166,26 @@ function MainContent() {
       }}
     ]);
   };
+
+  const handleToggleRestoreSubject = (name) => {
+    setSelectedRestoreSubjects((current) =>
+      current.includes(name)
+        ? current.filter((item) => item !== name)
+        : [...current, name].sort((a, b) => a.localeCompare(b))
+    );
+  };
+
+  const handleSelectAllRestoreSubjects = () => {
+    setSelectedRestoreSubjects([...restoreSubjectNames]);
+  };
+
+  const handleClearRestoreSubjects = () => {
+    setSelectedRestoreSubjects([]);
+  };
+
+  const restoredTemplateSubjects = restoreSubjectNames.filter((name) =>
+    subjects.some((subject) => subject.name === name && (subject.indicator_count || 0) > 0)
+  );
 
   const handleModelChange = async (model) => {
     try {
@@ -889,6 +917,12 @@ function MainContent() {
               handleTestConnection={handleTestConnection}
               handleCheckForUpdate={handleCheckForUpdate}
               handleRestoreDefaults={handleRestoreDefaults}
+              restoreSubjectNames={restoreSubjectNames}
+              restoredTemplateSubjects={restoredTemplateSubjects}
+              selectedRestoreSubjects={selectedRestoreSubjects}
+              handleToggleRestoreSubject={handleToggleRestoreSubject}
+              handleSelectAllRestoreSubjects={handleSelectAllRestoreSubjects}
+              handleClearRestoreSubjects={handleClearRestoreSubjects}
               handleFactoryReset={handleFactoryReset} 
               loading={loading}
               currentVersionLabel={`${currentVersionInfo.version} (${currentVersionInfo.versionCode})`}

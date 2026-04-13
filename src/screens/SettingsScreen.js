@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, Linking, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '../theme/styles';
 import { COLORS } from '../theme/colors';
@@ -10,11 +10,18 @@ export default function SettingsScreen({
   handleTestConnection,
   handleCheckForUpdate,
   handleRestoreDefaults,
+  restoreSubjectNames,
+  restoredTemplateSubjects,
+  selectedRestoreSubjects,
+  handleToggleRestoreSubject,
+  handleSelectAllRestoreSubjects,
+  handleClearRestoreSubjects,
   handleFactoryReset, 
   loading,
   currentVersionLabel,
   updateConfigReady
 }) {
+  const [showHowToUse, setShowHowToUse] = useState(false);
   const models = [
     { id: 'deepseek-chat', name: 'Chat', icon: 'chatbubble-outline' },
     { id: 'deepseek-reasoner', name: 'Reasoner', icon: 'bulb-outline' }
@@ -45,6 +52,15 @@ export default function SettingsScreen({
           <Text style={[styles.helpText, { textAlign: 'left', marginTop: 12, fontSize: 11, opacity: 0.7 }]}>
             Current version: {currentVersionLabel}
           </Text>
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, { backgroundColor: '#fff8e1', flexDirection: 'row', justifyContent: 'center', height: 48, marginTop: 14 }]}
+            onPress={() => setShowHowToUse(true)}
+            disabled={loading}
+          >
+            <Ionicons name="help-circle-outline" size={20} color="#ef6c00" style={{ marginRight: 8 }} />
+            <Text style={[styles.btnText, { color: '#ef6c00' }]}>How to Use This App</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={{ paddingHorizontal: 5, marginBottom: 15, marginTop: 15 }}>
@@ -108,15 +124,75 @@ export default function SettingsScreen({
           <Text style={styles.subTitle}>DATA MANAGEMENT</Text>
         </View>
         <View style={styles.modernItemContainer}>
-          <Text style={[styles.helpText, { textAlign: 'left', marginTop: 15, fontSize: 12 }]}>Recover default curriculum subjects that may have been deleted.</Text>
+          <Text style={[styles.helpText, { textAlign: 'left', marginTop: 15, fontSize: 12 }]}>Tick the default subjects you want to restore.</Text>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 10 }}>
+            <TouchableOpacity onPress={handleSelectAllRestoreSubjects} disabled={loading}>
+              <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700' }}>Select All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleClearRestoreSubjects} disabled={loading}>
+              <Text style={{ color: COLORS.danger, fontSize: 12, fontWeight: '700' }}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ backgroundColor: '#f8fafc', borderRadius: 14, padding: 12, maxHeight: 220 }}>
+            <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+              {restoreSubjectNames.map((name) => {
+                const isSelected = selectedRestoreSubjects.includes(name);
+                const isRestored = restoredTemplateSubjects.includes(name);
+                return (
+                  <TouchableOpacity
+                    key={name}
+                    onPress={() => handleToggleRestoreSubject(name)}
+                    disabled={loading}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 10,
+                      borderBottomWidth: 1,
+                      borderBottomColor: '#eef2f7'
+                    }}
+                  >
+                    <Ionicons
+                      name={isSelected ? 'checkbox' : 'square-outline'}
+                      size={22}
+                      color={isSelected ? COLORS.primary : '#94a3b8'}
+                      style={{ marginRight: 10 }}
+                    />
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ flex: 1, color: COLORS.dark, fontSize: 13 }}>{name}</Text>
+                      {isRestored ? (
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: '#e8f5e9',
+                          borderRadius: 999,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          marginLeft: 10
+                        }}>
+                          <Ionicons name="checkmark-circle" size={14} color="#2e7d32" style={{ marginRight: 4 }} />
+                          <Text style={{ color: '#2e7d32', fontSize: 11, fontWeight: '700' }}>Restored</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          <Text style={[styles.helpText, { textAlign: 'left', marginTop: 10, fontSize: 11, opacity: 0.7 }]}>
+            {selectedRestoreSubjects.length} subject{selectedRestoreSubjects.length === 1 ? '' : 's'} selected
+          </Text>
           
           <TouchableOpacity 
             style={[styles.primaryBtn, { backgroundColor: '#e8f5e9', marginTop: 15, flexDirection: 'row', justifyContent: 'center' }]} 
             onPress={handleRestoreDefaults}
-            disabled={loading}
+            disabled={loading || selectedRestoreSubjects.length === 0}
           >
             <Ionicons name="refresh-circle-outline" size={20} color="#2e7d32" style={{ marginRight: 8 }} />
-            <Text style={[styles.btnText, { color: '#2e7d32' }]}>Restore Default Subjects</Text>
+            <Text style={[styles.btnText, { color: '#2e7d32' }]}>Restore Selected Subjects</Text>
           </TouchableOpacity>
 
           <View style={{ height: 1, backgroundColor: '#eee', marginVertical: 20 }} />
@@ -214,6 +290,87 @@ export default function SettingsScreen({
           <Text style={{ fontSize: 10, color: COLORS.dark, marginTop: 4 }}>© 2026 Lesson Planner GH</Text>
         </View>
       </ScrollView>
+
+      <Modal visible={showHowToUse} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { padding: 24, borderRadius: 22, maxHeight: '82%' }]}>
+            <View style={[styles.cardHeader, { marginBottom: 16 }]}>
+              <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>How to Use This App</Text>
+              <TouchableOpacity
+                onPress={() => setShowHowToUse(false)}
+                style={{ backgroundColor: COLORS.light, borderRadius: 20, padding: 6 }}
+              >
+                <Ionicons name="close" size={22} color={COLORS.dark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 14 }}>
+                {[
+                  {
+                    title: '1. Import Or Restore Curriculum',
+                    body: 'Go to the Curriculum tab to import your own CSV file, or go to Settings and restore default subjects already bundled with the app.',
+                  },
+                  {
+                    title: '2. Start A New Plan',
+                    body: 'Open the Create page, enter the lesson details, select the class, then choose the subject.',
+                  },
+                  {
+                    title: '3. Choose An Indicator',
+                    body: 'Move to Step 2 and pick the exact curriculum indicator you want to teach. You can search if the list is long.',
+                  },
+                  {
+                    title: '4. Generate Content',
+                    body: 'Tap Generate to create a lesson plan, note, or questions. The app uses the selected curriculum indicator to guide the output.',
+                  },
+                  {
+                    title: '5. Review And Edit',
+                    body: 'Read through the generated content carefully. You can edit sections before saving or exporting.',
+                  },
+                  {
+                    title: '6. Save, Preview, Or Export',
+                    body: 'Save the plan for later, preview it as PDF, or download/share it when you are ready.',
+                  },
+                  {
+                    title: '7. Use History',
+                    body: 'Visit the History tab to reopen, update, reuse, or share previous lesson plans.',
+                  },
+                  {
+                    title: 'Important Note',
+                    body: 'Always review AI-generated content before classroom use to make sure it matches your learners, subject goals, and curriculum expectations.',
+                  },
+                ].map((item) => (
+                  <View
+                    key={item.title}
+                    style={{
+                      backgroundColor: '#f8fafc',
+                      borderRadius: 14,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: '#eef2f7',
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.dark, marginBottom: 6 }}>
+                      {item.title}
+                    </Text>
+                    <Text style={{ fontSize: 12, lineHeight: 19, color: '#52606d' }}>
+                      {item.body}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.primaryBtn, { marginTop: 18, flexDirection: 'row', justifyContent: 'center' }]}
+                onPress={() => setShowHowToUse(false)}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.btnText}>Close</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

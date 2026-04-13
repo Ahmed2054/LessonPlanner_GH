@@ -31,18 +31,26 @@ const callDbMethod = async (db, method, sql, params = []) => {
 };
 
 const withDbRetry = async (operation) => {
-    let db = await initDatabase();
-    try {
-        return await operation(db);
-    } catch (error) {
-        if (!shouldRecoverDatabase(error)) {
-            throw error;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const db = await initDatabase();
+
+        try {
+            return await operation(db);
+        } catch (error) {
+            lastError = error;
+
+            if (!shouldRecoverDatabase(error) || attempt === 2) {
+                throw error;
+            }
+
+            console.warn(`Recovering from stale SQLite connection (attempt ${attempt + 1}/2)...`);
+            await resetDbConnection();
         }
-        console.warn('Recovering from stale SQLite connection...');
-        await resetDbConnection();
-        db = await initDatabase();
-        return await operation(db);
     }
+
+    throw lastError;
 };
 
 const execDb = async (sql) => withDbRetry((db) => db.execAsync(sql));
@@ -172,41 +180,63 @@ export const initDatabase = async () => {
         dbPromise = null;
     }
 };
-export const autoImportTemplates = async (force = false) => {
+
+export const getTemplateSubjectNames = () => {
+    return Object.keys(CURRICULUM_TEMPLATES).sort((a, b) => a.localeCompare(b));
+};
+
+export const restoreTemplateSubjects = async (subjectNames = [], force = false) => {
     try {
-        const importedVersion = await getSetting('templates_version');
-        const currentVersion = '1.0'; // Increment this if you update the CSVs
-        
-        if (!force && importedVersion === currentVersion) {
-            console.log("Templates already up to date.");
-            return;
+        const namesToRestore = subjectNames
+            .filter((name) => typeof name === 'string' && CURRICULUM_TEMPLATES[name])
+            .sort((a, b) => a.localeCompare(b));
+
+        if (namesToRestore.length === 0) {
+            return 0;
         }
 
-        console.log("Starting auto-import of templates...");
-        const templateNames = Object.keys(CURRICULUM_TEMPLATES);
-        
-        for (const name of templateNames) {
-            // Check if subject already exists and has data
+        const importedVersion = await getSetting('templates_version');
+        const currentVersion = '1.1'; // Increment this if you update the CSVs
+        let restoredCount = 0;
+
+        console.log("Starting selective template restore...");
+
+        for (const name of namesToRestore) {
             const subject = await getFirstDb('SELECT id FROM subjects WHERE name = ?', [name]);
             let hasData = false;
+
             if (subject) {
                 const count = await getFirstDb('SELECT COUNT(*) as count FROM curriculum WHERE subject_id = ?', [subject.id]);
                 hasData = count.count > 0;
             }
 
-            // Only import if it doesn't exist or we're forcing an update (by version change)
-            if (!hasData || importedVersion !== currentVersion) {
-                console.log(`Auto-importing subject: ${name}`);
+            if (!hasData || force || importedVersion !== currentVersion) {
+                console.log(`Restoring subject: ${name}`);
                 await importCurriculumFromCSV(CURRICULUM_TEMPLATES[name], name);
+                restoredCount++;
             }
         }
 
         await setSetting('templates_version', currentVersion);
-        console.log("Auto-import complete.");
+        console.log("Selective restore complete.");
+        return restoredCount;
     } catch (e) {
-        console.error("Auto-import failed:", e);
+        console.error("Selective restore failed:", e);
         throw e;
     }
+};
+
+export const autoImportTemplates = async (force = false) => {
+    const importedVersion = await getSetting('templates_version');
+    const currentVersion = '1.1'; // Increment this if you update the CSVs
+
+    if (!force && importedVersion === currentVersion) {
+        console.log("Templates already up to date.");
+        return 0;
+    }
+
+    console.log("Starting auto-import of templates...");
+    return await restoreTemplateSubjects(getTemplateSubjectNames(), force);
 };
 
 export const setSetting = async (key, value) => {
