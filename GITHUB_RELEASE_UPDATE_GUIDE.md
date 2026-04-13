@@ -55,7 +55,15 @@ with your real repository URL.
 
 When you change `app.json`, build a new APK so the installed app contains the latest configuration.
 
-## 7. What users will experience
+## 7. Keep the signing key the same
+
+The installed app and the downloaded APK must be signed with the same Android signing key.
+
+If the keys differ, Android may open the installer but refuse to update the app.
+
+For EAS builds, keep using the same project credentials/keystore for every release.
+
+## 8. What users will experience
 
 Inside the app:
 
