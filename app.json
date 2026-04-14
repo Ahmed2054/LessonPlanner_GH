@@ -2,7 +2,7 @@
   "expo": {
     "name": "Lesson Planner GH",
     "slug": "lesson-planner",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,7 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "REQUEST_INSTALL_PACKAGES"
       ],

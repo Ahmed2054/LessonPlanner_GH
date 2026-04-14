@@ -6,14 +6,22 @@ const appConfig = require('../../app.json').expo;
 
 const APK_MIME_TYPE = 'application/vnd.android.package-archive';
 const INSTALL_INTENT_FLAGS = 1 | 268435456;
+const VIEW_APK_ACTION = 'android.intent.action.VIEW';
 const INSTALL_PACKAGE_ACTION = 'android.intent.action.INSTALL_PACKAGE';
-const INSTALLER_CANCELLED_RESULT_CODE = 0;
 
 const buildInstallFailureMessage = () => [
-  'Android opened the installer, but the update was not applied.',
+  'Android could not hand off the downloaded APK to the installer.',
   'Make sure this APK uses the same package name and signing key as the installed app.',
   'If Android blocks installs from this app, allow "Install unknown apps" for Lesson Planner GH and try again.'
 ].join(' ');
+
+const launchInstallIntent = async (action, contentUri) => {
+  await IntentLauncher.startActivityAsync(action, {
+    data: contentUri,
+    flags: INSTALL_INTENT_FLAGS,
+    type: APK_MIME_TYPE
+  });
+};
 
 const parseVersionPart = (value) => {
   const parsed = Number.parseInt(value, 10);
@@ -121,14 +129,22 @@ export const downloadAndInstallUpdate = async (remoteManifest, onProgress) => {
   }
 
   const contentUri = await LegacyFileSystem.getContentUriAsync(result.uri);
+  let installError = null;
 
-  const installResult = await IntentLauncher.startActivityAsync(INSTALL_PACKAGE_ACTION, {
-    data: contentUri,
-    flags: INSTALL_INTENT_FLAGS,
-    type: APK_MIME_TYPE
-  });
+  try {
+    await launchInstallIntent(INSTALL_PACKAGE_ACTION, contentUri);
+  } catch (primaryInstallError) {
+    installError = primaryInstallError;
 
-  if (installResult?.resultCode === INSTALLER_CANCELLED_RESULT_CODE) {
+    try {
+      await launchInstallIntent(VIEW_APK_ACTION, contentUri);
+      installError = null;
+    } catch (fallbackInstallError) {
+      installError = fallbackInstallError;
+    }
+  }
+
+  if (installError) {
     throw new Error(buildInstallFailureMessage());
   }
 
