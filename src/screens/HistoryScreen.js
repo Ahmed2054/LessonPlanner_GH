@@ -9,6 +9,7 @@ export default function HistoryScreen({
   handleDeletePlan,
   navigateToCreate,
   handleSharePDF,
+  handleShareMultiplePDF,
   onClearAll
 }) {
   return (
@@ -19,6 +20,7 @@ export default function HistoryScreen({
       handleDeletePlan={handleDeletePlan}
       navigateToCreate={navigateToCreate}
       handleSharePDF={handleSharePDF}
+      handleShareMultiplePDF={handleShareMultiplePDF}
       onClearAll={onClearAll}
     />
   );

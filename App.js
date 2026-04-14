@@ -41,7 +41,7 @@ import {
   restoreTemplateSubjects
 } from './src/services/database';
 import { generateLessonPlan, regeneratePhase, generateNote, generateQuestions, testConnection } from './src/services/ai';
-import { generatePDFFromPlan, openPDF, downloadFile } from './src/services/pdf';
+import { generatePDFFromPlan, generatePDFFromPlans, openPDF, downloadFile } from './src/services/pdf';
 import { checkForAppUpdate, downloadAndInstallUpdate, getCurrentVersionInfo } from './src/services/updates';
 
 import { COLORS } from './src/theme/colors';
@@ -785,6 +785,31 @@ function MainContent() {
     }
   };
 
+  const handleShareMultiplePDF = async (items) => {
+    setLoadingMessage({ title: "Preparing...", subtitle: "Combining selected lesson plans into one PDF" });
+    setLoading(true);
+
+    try {
+      const sortedItems = [...items].sort((left, right) => {
+        const leftDate = new Date(left.created_at.replace(' ', 'T') + 'Z').getTime();
+        const rightDate = new Date(right.created_at.replace(' ', 'T') + 'Z').getTime();
+        return rightDate - leftDate;
+      });
+
+      const pdfUri = await generatePDFFromPlans(sortedItems.map((item) => item.content));
+      const firstItem = sortedItems[0];
+      const firstData = JSON.parse(firstItem.content);
+      const subjectName = firstData?.header?.subject?.trim()?.replace(/\s+/g, '') || 'LessonPlans';
+      const name = `${subjectName}_${sortedItems.length}Plans_Combined.pdf`;
+
+      setLoading(false);
+      await downloadFile(pdfUri, name, 'application/pdf');
+    } catch (e) {
+      setLoading(false);
+      Alert.alert("Error", e.message);
+    }
+  };
+
   const handleOpenPDF = async () => {
     setLoadingMessage({ title: "Opening Preview...", subtitle: "Generating document" });
     setLoading(true);
@@ -893,6 +918,7 @@ function MainContent() {
               handleDeletePlan={handleDeletePlan}
               navigateToCreate={() => setActiveTab('Create')}
               handleSharePDF={handleSharePDF}
+              handleShareMultiplePDF={handleShareMultiplePDF}
               onClearAll={handleClearAllHistory}
             />
           )}

@@ -1,7 +1,7 @@
 {
-  "version": "2.0.1",
-  "versionCode": 3,
+  "version": "2.0.2",
+  "versionCode": 4,
   "apkUrl": "https://github.com/Ahmed2054/LessonPlanner_GH/releases/download/v2.0.1/lesson-planner-v2.0.1.apk",
-  "fileName": "lesson-planner-v2.0.1.apk",
-  "notes": "Improved automatic app update installation"
+  "fileName": "lesson-planner-v2.0.2.apk",
+  "notes": "Improved app update installation, added multi-select export of saved lesson plans into one PDF, refreshed History and Curriculum cards, and tightened page-header spacing for a more consistent interface."
 }

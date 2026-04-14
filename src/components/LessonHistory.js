@@ -10,12 +10,21 @@ const LessonHistory = ({
   handleLoadPlan,
   handleDeletePlan,
   handleSharePDF,
+  handleShareMultiplePDF,
   navigateToCreate,
   onClearAll
 }) => {
-  const PAGE_SIZE = 5;
+  const PAGE_SIZE = 8;
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('Lesson Plan');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const filterTabs = [
+    { label: 'Lesson Plan', icon: 'reader-outline', activeColor: '#1d4ed8', activeBg: '#dbeafe' },
+    { label: 'Note', icon: 'document-text-outline', activeColor: '#7c3aed', activeBg: '#ede9fe' },
+    { label: 'Questions', icon: 'help-circle-outline', activeColor: '#047857', activeBg: '#d1fae5' }
+  ];
+  const activeFilterTheme = filterTabs.find((tab) => tab.label === activeTab) || filterTabs[0];
 
   const filteredHistory = React.useMemo(() => {
     return history.filter(item => {
@@ -35,11 +44,18 @@ const LessonHistory = ({
 
   const totalPages = Math.ceil(filteredHistory.length / PAGE_SIZE) || 1;
   const currentItems = filteredHistory.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const selectedItems = filteredHistory.filter((item) => selectedIds.includes(item.id));
 
   // Reset page when tab changes
   React.useEffect(() => {
     setCurrentPage(1);
+    setSelectionMode(false);
+    setSelectedIds([]);
   }, [activeTab]);
+
+  React.useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => history.some((item) => item.id === id)));
+  }, [history]);
 
   const formatTime = (ts) => {
     if (!ts) return "";
@@ -92,35 +108,164 @@ const LessonHistory = ({
 
   const groupedItems = React.useMemo(() => groupHistoryByDate(currentItems), [currentItems]);
 
+  const toggleSelectionMode = () => {
+    setSelectionMode((current) => !current);
+    setSelectedIds([]);
+  };
+
+  const handleToggleSelected = (id) => {
+    setSelectedIds((current) =>
+      current.includes(id)
+        ? current.filter((itemId) => itemId !== id)
+        : [...current, id]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(filteredHistory.map((item) => item.id));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  const handleExportSelected = () => {
+    if (selectedItems.length === 0) return;
+    handleShareMultiplePDF(selectedItems);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: COLORS.light }]}>
       <View style={styles.modernTopRow}>
         <View style={{ flex: 1, paddingRight: 10 }}>
           <Text style={styles.modernTopRowTitle}>Lesson History</Text>
-          <Text style={styles.modernItemSubtitle}>Your saved generations</Text>
+          <Text style={[styles.modernItemSubtitle, { marginTop: 2, fontSize: 12 }]}>Saved generations</Text>
         </View>
         {filteredHistory.length > 0 && (
           <Text style={styles.pageIndicator}>Pg {currentPage}/{totalPages}</Text>
         )}
       </View>
 
-      <View style={{ flexDirection: 'row', paddingHorizontal: 15, marginBottom: 15, gap: 10 }}>
-        {['Lesson Plan', 'Note', 'Questions'].map(tab => (
+      {filteredHistory.length > 0 && (
+        <View style={{ paddingHorizontal: 12, marginBottom: 8 }}>
+          {!selectionMode ? (
+            <TouchableOpacity
+              style={{
+                alignSelf: 'flex-start',
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#e8f0fe',
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 6
+              }}
+              onPress={toggleSelectionMode}
+            >
+              <Ionicons name="checkbox-outline" size={15} color={COLORS.primary} style={{ marginRight: 5 }} />
+              <Text style={{ color: COLORS.primary, fontSize: 11, fontWeight: '700' }}>Select Multiple</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{
+              backgroundColor: '#fff',
+              borderRadius: 14,
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              borderWidth: 1,
+              borderColor: '#dbeafe'
+            }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ color: COLORS.dark, fontSize: 12, fontWeight: '700' }}>
+                  {selectedItems.length} selected
+                </Text>
+                <TouchableOpacity onPress={toggleSelectionMode}>
+                  <Text style={{ color: COLORS.danger, fontSize: 11, fontWeight: '700' }}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#eef2ff', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}
+                  onPress={handleSelectAllFiltered}
+                >
+                  <Text style={{ color: '#3949ab', fontSize: 11, fontWeight: '700' }}>All</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#fff3e0', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 }}
+                  onPress={handleClearSelection}
+                >
+                  <Text style={{ color: '#ef6c00', fontSize: 11, fontWeight: '700' }}>Clear</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: selectedItems.length > 0 ? '#e8f5e9' : '#eceff1',
+                    borderRadius: 999,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6
+                  }}
+                  onPress={handleExportSelected}
+                  disabled={selectedItems.length === 0}
+                >
+                  <Text style={{
+                    color: selectedItems.length > 0 ? '#2e7d32' : '#90a4ae',
+                    fontSize: 11,
+                    fontWeight: '700'
+                  }}>
+                    Export One PDF
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
+
+      <View style={{
+        marginHorizontal: 12,
+        marginBottom: 10,
+        backgroundColor: '#f8fafc',
+        borderRadius: 18,
+        padding: 6,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+      }}>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+        {filterTabs.map((tab) => (
           <TouchableOpacity
-            key={tab}
+            key={tab.label}
             style={[
-              styles.pill,
-              activeTab === tab && styles.pillActive,
-              { paddingHorizontal: 16 }
+              {
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 14,
+                paddingHorizontal: 10,
+                paddingVertical: 10,
+                backgroundColor: activeTab === tab.label ? tab.activeBg : 'transparent',
+                borderWidth: activeTab === tab.label ? 1 : 0,
+                borderColor: activeTab === tab.label ? tab.activeColor : 'transparent'
+              }
             ]}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => setActiveTab(tab.label)}
           >
-            <Text style={[styles.pillText, activeTab === tab && styles.pillTextActive]}>{tab}</Text>
+            <Ionicons
+              name={tab.icon}
+              size={15}
+              color={activeTab === tab.label ? tab.activeColor : '#64748b'}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={{
+              fontSize: 11,
+              fontWeight: activeTab === tab.label ? '800' : '700',
+              color: activeTab === tab.label ? tab.activeColor : '#64748b'
+            }}>
+              {tab.label}
+            </Text>
           </TouchableOpacity>
         ))}
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, paddingHorizontal: 5 }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, paddingHorizontal: 6 }}>
         {filteredHistory.length === 0 ? (
           <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 60 }}>
             <Ionicons name="document-text-outline" size={80} color="#ddd" />
@@ -131,19 +276,19 @@ const LessonHistory = ({
           </View>
         ) : (
           <>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 }}>
-              <Text style={styles.subTitle}>SAVED</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: 6 }}>
+              <Text style={[styles.subTitle, { fontSize: 12 }]}>SAVED</Text>
               <TouchableOpacity
-                style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#ffebee', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
+                style={{ paddingHorizontal: 9, paddingVertical: 5, backgroundColor: '#ffebee', borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}
                 onPress={onClearAll}
               >
-                <Ionicons name="trash-outline" size={16} color="#c62828" />
+                <Ionicons name="trash-outline" size={14} color="#c62828" />
                 <Text style={{ color: '#c62828', fontSize: 10, fontWeight: 'bold', marginLeft: 4 }}>CLEAR ALL</Text>
               </TouchableOpacity>
             </View>
             {groupedItems.map((group, groupIdx) => (
-              <View key={group.title} style={[styles.historyGroup, groupIdx > 0 && { marginTop: 5 }]}>
-                <Text style={styles.historyGroupTitle}>{group.title}</Text>
+              <View key={group.title} style={[styles.historyGroup, { marginBottom: 12 }, groupIdx > 0 && { marginTop: 2 }]}>
+                <Text style={[styles.historyGroupTitle, { marginBottom: 6, fontSize: 11 }]}>{group.title}</Text>
                 {group.items.map(item => {
                   let subjectName = "Lesson Plan";
                   try {
@@ -152,23 +297,99 @@ const LessonHistory = ({
                   } catch (e) { }
 
                   return (
-                    <View key={item.id} style={{ marginBottom: 12 }}>
-                      <Swipeable renderRightActions={() => renderRightActions(item)}>
+                    <View key={item.id} style={{ marginBottom: 8 }}>
+                      <Swipeable
+                        enabled={!selectionMode}
+                        renderRightActions={() => renderRightActions(item)}
+                      >
                         <TouchableOpacity
-                          style={styles.modernItemContainer}
-                          onPress={() => handleLoadPlan(item)}
+                          style={[
+                            styles.modernItemContainer,
+                            {
+                              padding: 0,
+                              borderRadius: 16,
+                              minHeight: 0,
+                              overflow: 'hidden',
+                              borderWidth: 1,
+                              borderColor: activeFilterTheme.activeBg
+                            },
+                            selectionMode && selectedIds.includes(item.id) && {
+                              borderWidth: 1.5,
+                              borderColor: activeFilterTheme.activeColor,
+                              backgroundColor: activeFilterTheme.activeBg
+                            }
+                          ]}
+                          onPress={() => selectionMode ? handleToggleSelected(item.id) : handleLoadPlan(item)}
                         >
-                          <View style={styles.modernItemHeader}>
-                            <View style={{ flex: 1, paddingRight: 10 }}>
-                              <Text style={styles.historySubjectText}>{subjectName}</Text>
-                              <View style={[styles.row, { marginTop: 6, flexWrap: 'wrap' }]}>
-                                <Text style={styles.historyIndicatorText}>{item.indicator_code}</Text>
-                                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#cbd5e1', marginHorizontal: 8 }} />
-                                <Text style={[styles.historyIndicatorText, { color: COLORS.accent }]}>Week {item.week || 'N/A'}</Text>
+                          <View style={{ flexDirection: 'row' }}>
+                            <View style={{ width: 6, backgroundColor: activeFilterTheme.activeColor }} />
+                            <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 11 }}>
+                              <View style={[styles.modernItemHeader, { alignItems: 'flex-start' }]}>
+                                {selectionMode && (
+                                  <Ionicons
+                                    name={selectedIds.includes(item.id) ? 'checkbox' : 'square-outline'}
+                                    size={20}
+                                    color={selectedIds.includes(item.id) ? activeFilterTheme.activeColor : '#94a3b8'}
+                                    style={{ marginRight: 8, marginTop: 1 }}
+                                  />
+                                )}
+                                <View style={{ flex: 1, paddingRight: 8 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+                                    <View style={{
+                                      backgroundColor: activeFilterTheme.activeBg,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 4,
+                                      borderRadius: 999,
+                                      marginRight: 8,
+                                      marginBottom: 4
+                                    }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: activeFilterTheme.activeColor, textTransform: 'uppercase' }}>
+                                        {activeTab}
+                                      </Text>
+                                    </View>
+                                    <View style={{
+                                      backgroundColor: activeFilterTheme.activeBg,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 4,
+                                      borderRadius: 999,
+                                      marginBottom: 4
+                                    }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: activeFilterTheme.activeColor }}>
+                                        Week {item.week || 'N/A'}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <Text
+                                    style={[styles.historySubjectText, { fontSize: 14.5, marginBottom: 5 }]}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                  >
+                                    {subjectName}
+                                  </Text>
+                                  <View style={[styles.row, { marginTop: 1, flexWrap: 'wrap', alignItems: 'center' }]}>
+                                    <Text
+                                      style={[styles.historyIndicatorText, { marginTop: 0, fontSize: 10.5, color: activeFilterTheme.activeColor }]}
+                                      numberOfLines={1}
+                                    >
+                                      {item.indicator_code}
+                                    </Text>
+                                  </View>
+                                  <Text style={[styles.modernItemSubtitle, { marginTop: 5, fontSize: 11 }]}>Saved at {formatTime(item.created_at)}</Text>
+                                </View>
+                                {!selectionMode && (
+                                  <View style={{
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: 17,
+                                    backgroundColor: activeFilterTheme.activeBg,
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}>
+                                    <Ionicons name="chevron-forward" size={18} color={activeFilterTheme.activeColor} />
+                                  </View>
+                                )}
                               </View>
-                              <Text style={[styles.modernItemSubtitle, { marginTop: 8 }]}>Saved at {formatTime(item.created_at)}</Text>
                             </View>
-                            <Ionicons name="chevron-forward" size={20} color="#ccc" />
                           </View>
                         </TouchableOpacity>
                       </Swipeable>

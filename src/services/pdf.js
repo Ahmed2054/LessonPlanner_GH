@@ -17,69 +17,109 @@ const cleanMarkdown = (text) => {
     return cleaned;
 };
 
-export const generatePDFFromPlan = async (planJson) => {
-    const data = JSON.parse(planJson);
-    const { header, phases } = data;
-
-    const formatDatePDF = (dateStr) => {
-        if (!dateStr) return '';
-        try {
-            // dateStr is typically YYYY-MM-DD from our app
-            if (dateStr.includes('-')) {
-                const [y, m, d] = dateStr.split('-');
-                return `${d}/${m}/${y}`;
-            }
-            return dateStr;
-        } catch (e) {
-            return dateStr;
+const formatDatePDF = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+        if (dateStr.includes('-')) {
+            const [y, m, d] = dateStr.split('-');
+            return `${d}/${m}/${y}`;
         }
-    };
+        return dateStr;
+    } catch (e) {
+        return dateStr;
+    }
+};
 
-        // Generate Body based on type
-        let bodyContent = '';
-        if (data.type === 'Note' || data.plan_type === 'Note' || data.noteContent) {
-            bodyContent = `
-                <div style="margin-top: 15px; font-size: 11pt; line-height: 1.6; padding-left: 5px; padding-right: 5px;">
-                    ${cleanMarkdown(data.noteContent)}
+const getTitleStr = (data) => (
+    data.type === 'Note' || data.plan_type === 'Note' ? 'LESSON NOTE' :
+    data.type === 'Questions' || data.plan_type === 'Questions' ? 'ASSESSMENT QUESTIONS' :
+    'LESSON PLAN RECORD'
+);
+
+const buildBodyContent = (data) => {
+    if (data.type === 'Note' || data.plan_type === 'Note' || data.noteContent) {
+        return `
+            <div style="margin-top: 15px; font-size: 11pt; line-height: 1.6; padding-left: 5px; padding-right: 5px;">
+                ${cleanMarkdown(data.noteContent)}
+            </div>
+        `;
+    }
+
+    if (data.type === 'Questions' || data.plan_type === 'Questions' || data.questionsContent) {
+        return `
+            <div style="margin-top: 15px; font-size: 11pt; line-height: 1.6; padding-left: 5px; padding-right: 5px;">
+                <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Questions</h3>
+                ${cleanMarkdown(data.questionsContent)}
+                <h3 style="margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Answers</h3>
+                ${cleanMarkdown(data.answersContent)}
+            </div>
+        `;
+    }
+
+    return `
+        <table style="margin-top: 15px;">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">PHASE</th>
+                    <th style="width: 65%;">LEARNING ACTIVITIES</th>
+                    <th style="width: 20%;">RESOURCES</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${(data.phases || []).map((p) => `
+                    <tr>
+                        <td><span class="phase-title">${p.name || p.phase}</span><br/>(${p.duration})</td>
+                        <td>${cleanMarkdown(p.activities)}</td>
+                        <td class="resources-cell">${cleanMarkdown(p.resources)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+};
+
+const buildPlanSectionHtml = (data) => {
+    const header = data.header || {};
+    const titleStr = getTitleStr(data);
+    const bodyContent = buildBodyContent(data);
+
+    return `
+        <section class="plan-section">
+            <div class="main-container">
+                <div class="main-title">${titleStr}</div>
+                
+                <div class="header-grid">
+                    <div class="header-item" style="grid-column: span 7;"><span class="header-label">Date:</span> <span class="header-value">${formatDatePDF(header.date)}</span></div>
+                    <div class="header-item" style="grid-column: span 6;"><span class="header-label">Week:</span> <span class="header-value">${header.week || 'N/A'}</span></div>
+                    <div class="header-item" style="grid-column: span 7;"><span class="header-label">Duration:</span> <span class="header-value">${header.duration || 'N/A'}</span></div>
+
+                    <div class="header-item" style="grid-column: span 7;"><span class="header-label">Subject:</span> <span class="header-value">${header.subject || 'N/A'}</span></div>
+                    <div class="header-item" style="grid-column: span 6;"><span class="header-label">Class:</span> <span class="header-value">${header.class || 'N/A'}</span></div>
+                    <div class="header-item" style="grid-column: span 7;"><span class="header-label">Class Size:</span> <span class="header-value">${header.classSize || header.class_size || 'N/A'}</span></div>
+
+                    <div class="header-item" style="grid-column: span 10;"><span class="header-label">Strand:</span> <span class="header-value">${header.strand || 'N/A'}</span></div>
+                    <div class="header-item" style="grid-column: span 10;"><span class="header-label">Sub Strand:</span> <span class="header-value">${header.subStrand || header.sub_strand || 'N/A'}</span></div>
+                    
+                    <div class="header-full"><span class="header-label">Content Standard:</span> <span class="header-value">${header.contentStandard || header.content_standard || 'N/A'}</span></div>
+                    
+                    <div class="header-split-60 header-stacked"><div class="header-label">Indicator:</div><div class="header-value">${header.indicator || 'N/A'}</div></div>
+                    <div class="header-split-40 header-stacked"><div class="header-label">Lesson:</div><div class="header-value">${header.lesson || 'N/A'}</div></div>
+                    
+                    <div class="header-split-70 header-stacked"><div class="header-label">Performance Indicator:</div><div class="header-value">${header.performanceIndicator || header.performance_indicator || 'N/A'}</div></div>
+                    <div class="header-split-30 header-stacked"><div class="header-label">Core Competencies:</div><div class="header-value">${header.coreCompetencies || header.core_competencies || 'N/A'}</div></div>
+                    <div class="header-full"><span class="header-label">Keywords:</span> <span class="header-value">${header.keywords || 'N/A'}</span></div>
                 </div>
-            `;
-        } else if (data.type === 'Questions' || data.plan_type === 'Questions' || data.questionsContent) {
-            bodyContent = `
-                <div style="margin-top: 15px; font-size: 11pt; line-height: 1.6; padding-left: 5px; padding-right: 5px;">
-                    <h3 style="margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Questions</h3>
-                    ${cleanMarkdown(data.questionsContent)}
-                    <h3 style="margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Answers</h3>
-                    ${cleanMarkdown(data.answersContent)}
-                </div>
-            `;
-        } else {
-            bodyContent = `
-                <table style="margin-top: 15px;">
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">PHASE</th>
-                            <th style="width: 65%;">LEARNING ACTIVITIES</th>
-                            <th style="width: 20%;">RESOURCES</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${(data.phases || []).map((p, i) => `
-                            <tr>
-                                <td><span class="phase-title">${p.name || p.phase}</span><br/>(${p.duration})</td>
-                                <td>${cleanMarkdown(p.activities)}</td>
-                                <td class="resources-cell">${cleanMarkdown(p.resources)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-        }
 
-    const titleStr = data.type === 'Note' || data.plan_type === 'Note' ? 'LESSON NOTE' :
-                     data.type === 'Questions' || data.plan_type === 'Questions' ? 'ASSESSMENT QUESTIONS' :
-                     'LESSON PLAN RECORD';
+                ${bodyContent}
+            </div>
+        </section>
+    `;
+};
 
-    const html = `
+const buildPdfHtml = (plans) => {
+    const sections = plans.map(buildPlanSectionHtml).join('');
+
+    return `
         <html>
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -113,6 +153,12 @@ export const generatePDFFromPlan = async (planJson) => {
                         max-width: 210mm;
                         margin: 0;
                         padding: 10mm;
+                    }
+                    .plan-section {
+                        page-break-after: always;
+                    }
+                    .plan-section:last-child {
+                        page-break-after: auto;
                     }
                     .header-grid { 
                         display: grid;
@@ -240,42 +286,34 @@ export const generatePDFFromPlan = async (planJson) => {
                 </style>
             </head>
             <body>
-                <div class="main-container">
-                    <div class="main-title">${titleStr}</div>
-                    
-                    <div class="header-grid">
-                        <div class="header-item" style="grid-column: span 7;"><span class="header-label">Date:</span> <span class="header-value">${formatDatePDF(header.date)}</span></div>
-                        <div class="header-item" style="grid-column: span 6;"><span class="header-label">Week:</span> <span class="header-value">${header.week}</span></div>
-                        <div class="header-item" style="grid-column: span 7;"><span class="header-label">Duration:</span> <span class="header-value">${header.duration}</span></div>
-
-                        <div class="header-item" style="grid-column: span 7;"><span class="header-label">Subject:</span> <span class="header-value">${header.subject}</span></div>
-                        <div class="header-item" style="grid-column: span 6;"><span class="header-label">Class:</span> <span class="header-value">${header.class}</span></div>
-                        <div class="header-item" style="grid-column: span 7;"><span class="header-label">Class Size:</span> <span class="header-value">${header.classSize || header.class_size || 'N/A'}</span></div>
-
-                        <div class="header-item" style="grid-column: span 10;"><span class="header-label">Strand:</span> <span class="header-value">${header.strand}</span></div>
-                        <div class="header-item" style="grid-column: span 10;"><span class="header-label">Sub Strand:</span> <span class="header-value">${header.subStrand || header.sub_strand || 'N/A'}</span></div>
-                        
-                        <div class="header-full"><span class="header-label">Content Standard:</span> <span class="header-value">${header.contentStandard || header.content_standard || 'N/A'}</span></div>
-                        
-                        <div class="header-split-60 header-stacked"><div class="header-label">Indicator:</div><div class="header-value">${header.indicator}</div></div>
-                        <div class="header-split-40 header-stacked"><div class="header-label">Lesson:</div><div class="header-value">${header.lesson || 'N/A'}</div></div>
-                        
-                        <div class="header-split-70 header-stacked"><div class="header-label">Performance Indicator:</div><div class="header-value">${header.performanceIndicator || header.performance_indicator || 'N/A'}</div></div>
-                        <div class="header-split-30 header-stacked"><div class="header-label">Core Competencies:</div><div class="header-value">${header.coreCompetencies || header.core_competencies || 'N/A'}</div></div>
-                        <div class="header-full"><span class="header-label">Keywords:</span> <span class="header-value">${header.keywords || 'N/A'}</span></div>
-                    </div>
-
-                    ${bodyContent}
-                </div>
+                ${sections}
             </body>
         </html>
     `;
+};
 
+const printHtmlToPdf = async (html) => {
     const { uri } = await Print.printToFileAsync({
         html,
         base64: false
     });
     return uri;
+};
+
+export const generatePDFFromPlan = async (planJson) => {
+    const data = JSON.parse(planJson);
+    const html = buildPdfHtml([data]);
+    return printHtmlToPdf(html);
+};
+
+export const generatePDFFromPlans = async (planJsonList = []) => {
+    if (!Array.isArray(planJsonList) || planJsonList.length === 0) {
+        throw new Error('Select at least one saved lesson plan to export.');
+    }
+
+    const plans = planJsonList.map((planJson) => JSON.parse(planJson));
+    const html = buildPdfHtml(plans);
+    return printHtmlToPdf(html);
 };
 
 export const sharePDF = async (uri, fileNameBase = "LessonPlan") => {
@@ -414,4 +452,3 @@ export const downloadFile = async (uri, fileName, mimeType) => {
         await Sharing.shareAsync(uri);
     }
 };
-

@@ -149,18 +149,81 @@ const SubjectManager = ({
               ) : (
                 <Swipeable renderRightActions={() => renderRightActions(subject)}>
                   <TouchableOpacity 
-                    style={styles.modernItemContainer}
+                    style={[
+                      styles.modernItemContainer,
+                      {
+                        padding: 0,
+                        overflow: 'hidden',
+                        borderRadius: 16,
+                        borderColor: '#dbeafe',
+                        borderWidth: 1
+                      }
+                    ]}
                     onPress={() => onSelectSubject(subject)}
                   >
-                    <View style={styles.modernItemHeader}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.modernItemTitle}>{subject.name}</Text>
-                        {subject.tribe ? (
-                            <Text style={{ fontSize: 11, color: COLORS.accent, fontWeight: '800', textTransform: 'uppercase', marginBottom: 2 }}>{subject.tribe}</Text>
-                        ) : null}
-                        <Text style={styles.modernItemSubtitle}>{subject.indicator_count || 0} Indicators Available</Text>
+                    <View style={{ flexDirection: 'row' }}>
+                      <View style={{ width: 6, backgroundColor: '#2563eb' }} />
+                      <View style={{ flex: 1, paddingHorizontal: 14, paddingVertical: 13 }}>
+                        <View style={[styles.modernItemHeader, { alignItems: 'flex-start' }]}>
+                          <View style={{ flex: 1, paddingRight: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+                              <View style={{
+                                backgroundColor: '#dbeafe',
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                borderRadius: 999,
+                                marginRight: 8,
+                                marginBottom: 4
+                              }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#1d4ed8', textTransform: 'uppercase' }}>
+                                  Subject
+                                </Text>
+                              </View>
+                              {subject.tribe ? (
+                                <View style={{
+                                  backgroundColor: '#ecfeff',
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 4,
+                                  borderRadius: 999,
+                                  marginBottom: 4
+                                }}>
+                                  <Text style={{ fontSize: 10, color: '#0f766e', fontWeight: '800', textTransform: 'uppercase' }}>
+                                    {subject.tribe}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                            <Text style={[styles.modernItemTitle, { fontSize: 17, marginBottom: 6 }]}>{subject.name}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <View style={{
+                                backgroundColor: '#eff6ff',
+                                borderRadius: 999,
+                                paddingHorizontal: 9,
+                                paddingVertical: 5,
+                                marginRight: 8,
+                                marginBottom: 4
+                              }}>
+                                <Text style={{ fontSize: 11, color: '#2563eb', fontWeight: '700' }}>
+                                  {subject.indicator_count || 0} indicators
+                                </Text>
+                              </View>
+                              <Text style={[styles.modernItemSubtitle, { fontSize: 11, marginTop: 0 }]}>
+                                Tap to manage curriculum rows
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: '#eff6ff',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <Ionicons name="chevron-forward" size={20} color="#2563eb" />
+                          </View>
+                        </View>
                       </View>
-                      <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </View>
                   </TouchableOpacity>
                 </Swipeable>

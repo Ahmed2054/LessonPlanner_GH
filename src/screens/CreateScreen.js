@@ -234,7 +234,7 @@ export default function CreateScreen({
     <View style={styles.container}>
 
       {/* ── Top breadcrumb progress bar ──────────────────────────── */}
-      <View style={[styles.modernTopRow, { margin: 15, marginBottom: 5 }]}>
+      <View style={styles.modernTopRow}>
         <View style={{ flex: 1, paddingRight: 10 }}>
           <Text style={styles.modernTopRowTitle}>
             Creator
